@@ -75,6 +75,12 @@
                             <div data-i18n="Students">Students</div>
                         </a>
                     </li>
+                    <li class="menu-item <?php echo $menu_status == 'location' ? 'active' : ''; ?>">
+                        <a href="<?php echo base_url(); ?>location-list" class="menu-link">
+                            <i class="menu-icon tf-icons bx bx-map-pin"></i>
+                            <div data-i18n="Location Master">Location Master</div>
+                        </a>
+                    </li>
                     <li class="menu-item <?php echo $menu_status == 'general-settings' ? 'active' : ''; ?>">
                         <a href="<?php echo base_url(); ?>general-settings" class="menu-link">
                             <i class="menu-icon tf-icons bx bx-cog"></i>

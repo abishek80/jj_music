@@ -1,9 +1,19 @@
 <section class="content-wrapper">
     <div class="container-xxl flex-grow-1 container-p-y">
-        <div class="d-flex flex-wrap gap-2 gap-md-3 mb-3">
-            <a href="<?php echo base_url(); ?>student-list" class="<?php echo ($activeLink == '') ? 'bg-primary text-white' : 'bg-white text-primary'; ?> px-4 py-2 px-md-5 shadow shadow-sm fw-bold lh-1 rounded-2 border-primary border border-3 border-end-0 border-start-0 border-top-0">All</a>
-            <a href="<?php echo base_url(); ?>student-list/active" class="<?php echo ($activeLink == 'active') ? 'bg-success text-white' : 'bg-white text-success'; ?> px-4 py-2 px-md-5 shadow shadow-sm fw-bold lh-1 rounded-2 border-success border border-3 border-end-0 border-start-0 border-top-0">Active</a>
-            <a href="<?php echo base_url(); ?>student-list/inactive" class="<?php echo ($activeLink == 'inactive') ? 'bg-danger text-white' : 'bg-white text-danger'; ?> px-4 py-2 px-md-5 shadow shadow-sm fw-bold lh-1 rounded-2 border-danger border border-3 border-end-0 border-start-0 border-top-0">Inactive</a>
+        <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-3">
+            <div class="d-flex flex-wrap gap-2 gap-md-3">
+                <a href="<?php echo base_url(); ?>student-list<?php echo $selectedLocationId ? '?location_id=' . $selectedLocationId : ''; ?>" class="<?php echo ($activeLink == '') ? 'bg-primary text-white' : 'bg-white text-primary'; ?> px-4 py-2 px-md-5 shadow shadow-sm fw-bold lh-1 rounded-2 border-primary border border-3 border-end-0 border-start-0 border-top-0">All</a>
+                <a href="<?php echo base_url(); ?>student-list/active<?php echo $selectedLocationId ? '?location_id=' . $selectedLocationId : ''; ?>" class="<?php echo ($activeLink == 'active') ? 'bg-success text-white' : 'bg-white text-success'; ?> px-4 py-2 px-md-5 shadow shadow-sm fw-bold lh-1 rounded-2 border-success border border-3 border-end-0 border-start-0 border-top-0">Active</a>
+                <a href="<?php echo base_url(); ?>student-list/inactive<?php echo $selectedLocationId ? '?location_id=' . $selectedLocationId : ''; ?>" class="<?php echo ($activeLink == 'inactive') ? 'bg-danger text-white' : 'bg-white text-danger'; ?> px-4 py-2 px-md-5 shadow shadow-sm fw-bold lh-1 rounded-2 border-danger border border-3 border-end-0 border-start-0 border-top-0">Inactive</a>
+            </div>
+            <div class="d-flex align-items-center gap-2">
+                <select id="locationFilter" class="form-select w-auto fw-bold text-black border-primary">
+                    <option value="">All Locations</option>
+                    <?php foreach ($locationList as $loc) { ?>
+                        <option value="<?php echo $loc->id; ?>" <?php echo ($selectedLocationId == $loc->id) ? 'selected' : ''; ?>><?php echo $loc->location_name; ?></option>
+                    <?php } ?>
+                </select>
+            </div>
         </div>
         <div class="card p-3">
             <div class="d-flex justify-content-between align-items-center border-bottom mb-3 pb-3 flex-wrap gap-3">
@@ -17,6 +27,7 @@
                         <th class="w-min-40">S. No</th>
                         <th>Student Code</th>
                         <th>Student Name & Class</th>
+                        <th>Location & Fees</th>
                         <th>Parent Name & Type</th>
                         <th>Mobile Number & Email</th>
                         <th>status</th>
@@ -34,6 +45,10 @@
                             <td>
                                 <p class="mb-1"><?php echo $row->student_name; ?></p>
                                 <p class="mb-0"><?php echo $row->class; ?></p>
+                            </td>
+                            <td>
+                                <p class="mb-1"><?php echo $row->location_name ? $row->location_name : 'N/A'; ?></p>
+                                <p class="mb-0 text-danger">₹ <?php echo number_format($row->fees_amount, 2); ?></p>
                             </td>
                             <td>
                                 <p class="mb-1"><?php echo $row->parent_name; ?></p>
@@ -91,6 +106,14 @@
                         <label class="w-100 fw-bold text-black mb-1">Class</label>
                         <div id="class" class="text-capitalize text-black"></div>
                     </div>
+                    <div class="col-lg-3 col-md-4 col-sm-6">
+                        <label class="w-100 fw-bold text-black mb-1">Location</label>
+                        <div id="locationName" class="text-capitalize text-black"></div>
+                    </div>
+                    <div class="col-lg-3 col-md-4 col-sm-6">
+                        <label class="w-100 fw-bold text-black mb-1">Fees Amount</label>
+                        <div id="feesAmountDisplay" class="text-success fw-bold"></div>
+                    </div>
                     <div class="col-lg-3 col-md-4 col-sm-6 aadharNumber">
                         <label class="w-100 fw-bold text-black mb-1">Aadhar Number</label>
                         <div id="aadharNumber" class="text-capitalize text-black"></div>
@@ -138,13 +161,20 @@
 </div>
 
 <script>
+    $(document).on("change", "#locationFilter", function(){
+        var locId = $(this).val();
+        var currentUrl = "<?php echo base_url(); ?>student-list<?php echo $activeLink ? '/' . $activeLink : ''; ?>";
+        if (locId) {
+            window.location.href = currentUrl + "?location_id=" + locId;
+        } else {
+            window.location.href = currentUrl;
+        }
+    });
+
     $(document).on("click", ".getstudentId", function(e){
         var studentId = $(this).data("studentid");
         $.ajax({
             type: "POST",
-            headers: {
-                "X-CSRFToken": csrftoken
-            },
             url: '<?php echo base_url(); ?>getStudentDetail',
             dataType: "json",
             data: {studentId},
@@ -153,6 +183,8 @@
                 $('#studentCode').html(data.studentCode);
                 $('#studentName').html(data.studentName);
                 $('#class').html(data.class);
+                $('#locationName').html(data.locationName ? data.locationName : 'N/A');
+                $('#feesAmountDisplay').html('₹ ' + parseFloat(data.feesAmount || 0).toFixed(2));
                 $('#aadharNumber').html(data.aadharNumber);
                 $('#joiningDate').html(data.joiningDate);
                 $('#email').html(data.email);

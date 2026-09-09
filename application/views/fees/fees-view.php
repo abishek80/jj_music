@@ -15,23 +15,27 @@
                     <h6 class="mb-0"><?php echo $studentClass; ?></h6>
                 </div>
                 <div class="col-lg-3 col-6">
-                    <p class="mb-2">Aadhar Number</p>
-                    <h6 class="mb-0"><?php echo $aadharNumber; ?></h6>
+                    <p class="mb-2">Location</p>
+                    <h6 class="mb-0 text-primary fw-bold"><?php echo $locationName ? $locationName : 'N/A'; ?></h6>
                 </div>
                 <div class="col-12 m-0"></div>
                 <div class="col-lg-3 col-6">
+                    <p class="mb-2">Monthly Fee Amount</p>
+                    <h6 class="mb-0 text-success fw-bold">₹ <?php echo number_format($feesAmount, 2); ?></h6>
+                </div>
+                <div class="col-lg-3 col-6">
+                    <p class="mb-2">Aadhar Number</p>
+                    <h6 class="mb-0"><?php echo $aadharNumber ? $aadharNumber : '-'; ?></h6>
+                </div>
+                <div class="col-lg-3 col-6">
                     <p class="mb-2">Parent Name & Type</p>
-                    <h6 class="mb-2"><?php echo $parentName; ?></h6>
-                    <h6 class="mb-0"><?php echo $parentType; ?></h6>
+                    <h6 class="mb-1"><?php echo $parentName; ?></h6>
+                    <small class="text-muted"><?php echo $parentType; ?></small>
                 </div>
                 <div class="col-lg-3 col-6">
                     <p class="mb-2">Mobile Number & Email</p>
-                    <a href="tel:<?php echo $mobileNumber; ?>" class="mb-1"><?php echo $mobileNumber; ?></a>
-                    <a href="mailto:<?php echo $email; ?>" class="mb-0"><?php echo $email; ?></a>
-                </div>
-                <div class="col-lg-3 col-6">
-                    <p class="mb-2">Address</p>
-                    <h6 class="mb-0"><?php echo $address; ?></h6>
+                    <a href="tel:<?php echo $mobileNumber; ?>" class="d-block mb-1"><?php echo $mobileNumber; ?></a>
+                    <a href="mailto:<?php echo $email; ?>" class="d-block mb-0"><?php echo $email; ?></a>
                 </div>
             </div>
         </div>
@@ -201,7 +205,7 @@
                             </div>
                             <div class="col-lg-4 col-md-6">
                                 <label class="w-100 fw-bold text-black mb-1">Fee Amount</label>
-                                <input type="text" name="fee_amount" id="modal_fee_amount" class="form-control decimal" placeholder="Enter Fee Amount" value="1000">
+                                <input type="text" name="fee_amount" id="modal_fee_amount" class="form-control decimal" placeholder="Enter Fee Amount" value="">
                             </div>
                             <div class="col-lg-4 col-md-6">
                                 <label class="w-100 fw-bold text-black mb-1">Payment Date</label>
@@ -275,7 +279,7 @@
                         $('#modal_payment_method').val(data.paymentMethod);
                         $('#modal_payment_status').val(data.paymentStatus);
                     } else {
-                        $('#modal_fee_amount').val(1000);
+                        $('#modal_fee_amount').val(data.feeAmount ? data.feeAmount : '');
                         $('#modal_payment_date').val('<?php echo date('Y-m-d'); ?>');
                         $('#modal_payment_method').val('');
                         $('#modal_payment_status').val('');

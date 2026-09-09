@@ -17,6 +17,15 @@
                     <label class="w-100 fw-bold text-black mb-2 fs-14px">Date <span class="text-danger">*</span></label>
                     <input name="present_date" id="present_date" type="date" class="form-control date-picker presentDate" placeholder="YYYY - MM - DD" value="<?php echo $presentDate; ?>">
                 </div>
+                <div class="col-lg-3 col-md-6 col-6">
+                    <label class="w-100 fw-bold text-black mb-2 fs-14px">Location</label>
+                    <select name="location_id" id="location_id" class="form-select locationFilter">
+                        <option value="">All Locations</option>
+                        <?php foreach ($locationList as $loc) { ?>
+                            <option value="<?php echo $loc->id; ?>"><?php echo $loc->location_name; ?></option>
+                        <?php } ?>
+                    </select>
+                </div>
                 <div class="col-12">
                     <div class="mt-2 table-responsive">
                         <table class="table table-striped table-bordered">
@@ -24,13 +33,14 @@
                                 <tr>
                                     <th>S. No</th>
                                     <th>Student Name</th>
-                                    <th>class</th>
+                                    <th>Class</th>
+                                    <th>Location</th>
                                     <th>Attendance Type</th>
                                 </tr>
                             </thead>
                             <tbody id="studentTableBody">
                                 <tr>
-                                    <td colspan="4" class="text-center">Select a date to view attendance</td>
+                                    <td colspan="5" class="text-center">Select a date to view attendance</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -43,20 +53,21 @@
 
 
 <script>
-    $('.presentDate').change(function () {
+    function loadAttendanceStudents() {
         var selectedAttendanceDate = $('.presentDate').val();
+        var selectedLocationId = $('.locationFilter').val();
 
         if (selectedAttendanceDate !== '') {
-
             var tbody = $('#studentTableBody');
-            tbody.html('<tr><td colspan="4" class="text-center">Loading...</td></tr>');
+            tbody.html('<tr><td colspan="5" class="text-center">Loading...</td></tr>');
 
             $.ajax({
                 url: "<?php echo base_url('attendanceStudentList'); ?>",
                 type: "POST",
                 dataType: "json",
                 data: {
-                    attendanceDate: selectedAttendanceDate
+                    attendanceDate: selectedAttendanceDate,
+                    locationId: selectedLocationId
                 },
                 success: function (data) {
                     tbody.empty();
@@ -67,6 +78,7 @@
                                 '<td>' + (index + 1) + '</td>' +
                                 '<td>' + (row.student_name || 'N/A') + '</td>' +
                                 '<td>' + (row.class || 'N/A') + '</td>' +
+                                '<td>' + (row.location_name || 'N/A') + '</td>' +
                                 '<td>' +
                                     '<input name="student_id[]" value="' + row.id + '" type="hidden">' +
                                     '<select name="attendance_type[]" class="form-select">' +
@@ -79,14 +91,18 @@
                             tbody.append(html);
                         });
                     } else {
-                        tbody.append('<tr><td colspan="4" class="text-center">No student found</td></tr>');
+                        tbody.append('<tr><td colspan="5" class="text-center">No student found</td></tr>');
                     }
                 },
                 error: function () {
-                    tbody.html('<tr><td colspan="4" class="text-danger text-center">Error loading data</td></tr>');
+                    tbody.html('<tr><td colspan="5" class="text-danger text-center">Error loading data</td></tr>');
                 }
             });
         }
+    }
+
+    $(document).on("change", ".presentDate, .locationFilter", function () {
+        loadAttendanceStudents();
     });
 
 

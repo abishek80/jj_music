@@ -106,7 +106,7 @@
                                         $amount = $payment->fee_amount;
                                         $color = ($payment->payment_status == 'paid') ? "text-success" : "text-danger";
                                     } else {
-                                        $amount = "1000";
+                                        $amount = ($row->fees_amount && floatval($row->fees_amount) > 0) ? number_format($row->fees_amount, 0) : "0";
                                         $color = "text-danger";
                                     }
                                 }

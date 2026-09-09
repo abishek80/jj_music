@@ -51,6 +51,19 @@
                     <input name="parent_type" id="parent_type" type="text" class="form-control" placeholder="Enter Parent Type" value="<?php echo $parentType; ?>">
                 </div>
                 <div class="col-lg-4 col-md-6">
+                    <label class="w-100 fw-bold text-black mb-2 fs-14px">Location <span class="text-danger">*</span></label>
+                    <select name="location_id" id="location_id" class="form-select">
+                        <option value="">Select Location</option>
+                        <?php foreach ($locationList as $loc) { ?>
+                            <option value="<?php echo $loc->id; ?>" data-fees="<?php echo $loc->fees_amount; ?>" <?php echo ($locationId == $loc->id) ? 'selected' : ''; ?>><?php echo $loc->location_name; ?></option>
+                        <?php } ?>
+                    </select>
+                </div>
+                <div class="col-lg-4 col-md-6">
+                    <label class="w-100 fw-bold text-black mb-2 fs-14px">Fees Amount (₹) <span class="text-danger">*</span></label>
+                    <input name="fees_amount" id="fees_amount" type="text" class="form-control bg-light text-dark fw-bold" placeholder="Fees Amount" value="<?php echo $feesAmount; ?>">
+                </div>
+                <div class="col-lg-4 col-md-6">
                     <label class="w-100 fw-bold text-black mb-2 fs-14px">Address <span class="text-danger">*</span></label>
                     <textarea name="address" id="address" class="form-control" placeholder="Enter Address" style="min-height: 100px;"><?php echo $address; ?></textarea>
                 </div>
@@ -68,6 +81,16 @@
 
 
 <script>
+    $(document).on("change", "#location_id", function() {
+        var selectedOpt = $(this).find('option:selected');
+        var fees = selectedOpt.data('fees');
+        if (fees !== undefined && fees !== '') {
+            $('#fees_amount').val(fees);
+        } else {
+            $('#fees_amount').val('');
+        }
+    });
+
     // Student Save Function
     $("#studentForm").validate({
         rules: {
@@ -95,6 +118,9 @@
             parent_type: {
                 required: true
             },
+            location_id: {
+                required: true
+            },
             address: {
                 required: true
             }
@@ -120,6 +146,9 @@
             },
             parent_type: {
                 required: "Please Enter Parent Type"
+            },
+            location_id: {
+                required: "Please Select Location"
             },
             address: {
                 required: "Please Enter Address"

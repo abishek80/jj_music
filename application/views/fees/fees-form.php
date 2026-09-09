@@ -62,7 +62,7 @@
                 </div>
                 <div class="col-lg-3 col-md-6">
                     <label class="w-100 fw-bold text-black mb-2 fs-14px">Fee Amount <span class="text-danger">*</span></label>
-                    <input name="fee_amount" id="fee_amount" type="text" class="form-control decimal" placeholder="Enter Fee Amount" value="<?php echo $feeAmount ?? '1000'; ?>">
+                    <input name="fee_amount" id="fee_amount" type="text" class="form-control decimal" placeholder="Enter Fee Amount" value="<?php echo $feeAmount; ?>">
                 </div>
                 <div class="col-lg-3 col-md-6">
                     <label class="w-100 fw-bold text-black mb-2 fs-14px">Payment Date <span class="text-danger">*</span></label>
@@ -109,6 +109,9 @@
                         $('#student_id').val(res.id);
                         $('#student_code').val(res.student_code);
                         $('#class').val(res.class);
+                        if (res.fees_amount && parseFloat(res.fees_amount) > 0) {
+                            $('#fee_amount').val(res.fees_amount);
+                        }
                     }
                 });
             }

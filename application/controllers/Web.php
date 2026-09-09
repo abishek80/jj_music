@@ -18,12 +18,105 @@ class Web extends CI_Controller {
       error_reporting(E_ALL ^ (E_NOTICE | E_WARNING | E_DEPRECATED));
     }
 
-    public function student_list($pageStatus = '')
+    // Location Master Methods //
+    public function location_list($pageStatus = '')
     {
-        $data["menu_status"] = 'student';
+        $data["menu_status"] = 'location';
         $data['activeLink'] = $pageStatus;
 
-        $data['studentList'] = $this->webmodel->getStudentList($pageStatus);
+        $data['locationList'] = $this->webmodel->getLocationList($pageStatus);
+
+        $this->load->view('settings/header', $data);
+        $this->load->view('location/location-list', $data);
+        $this->load->view('settings/footer');
+    }
+
+    public function location_add()
+    {
+        $data["menu_status"] = 'location';
+        $data['formTitle'] = "Add Location";
+        $data['locationId'] = '';
+        $data['locationName'] = '';
+        $data['feesAmount'] = '';
+        $data['status'] = 'active';
+
+        $this->load->view('settings/header', $data);
+        $this->load->view('location/location-form', $data);
+        $this->load->view('settings/footer');
+    }
+
+    public function location_edit($locationId)
+    {
+        $data["menu_status"] = 'location';
+        $data['formTitle'] = "Edit Location";
+
+        $locationInfo = $this->webmodel->getLocationInfo($locationId);
+        foreach ($locationInfo as $row) {
+            $data['locationId'] = $row->id;
+            $data['locationName'] = $row->location_name;
+            $data['feesAmount'] = $row->fees_amount;
+            $data['status'] = $row->status;
+        }
+
+        $this->load->view('settings/header', $data);
+        $this->load->view('settings/location-form', $data);
+        $this->load->view('settings/footer');
+    }
+
+    public function locationFormSave()
+    {
+        $locationId = $this->input->post('location_id');
+        $locationName = $this->input->post('location_name');
+        $feesAmount = $this->input->post('fees_amount');
+        $status = $this->input->post('status');
+
+        if (empty($locationName)) {
+            $data["isError"] = TRUE;
+            $data["message"] = "Please Enter Location Name";
+            echo json_encode($data);
+            return;
+        }
+
+        $this->webmodel->saveLocationData($locationId, $locationName, $feesAmount, $status);
+
+        $data["isError"] = FALSE;
+        if ($locationId > 0) {
+            $data["message"] = "Location Updated Successfully";
+        } else {
+            $data["message"] = "Location Created Successfully";
+        }
+
+        echo json_encode($data);
+        return;
+    }
+
+    public function getLocationDetail()
+    {
+        $locationId = $this->input->post('locationId');
+
+        $locationData = $this->webmodel->getLocationInfo($locationId);
+        $data = array();
+        foreach ($locationData as $row) {
+            $data['locationId'] = $row->id;
+            $data['locationName'] = $row->location_name;
+            $data['feesAmount'] = $row->fees_amount;
+            $data['status'] = $row->status;
+            $data['createdBy'] = $row->createdBy;
+            $data['createdAt'] = $row->createdAt;
+        }
+        echo json_encode($data);
+    }
+
+    // Student Methods //
+    public function student_list($pageStatus = '')
+    {
+        $locationId = $this->input->get('location_id');
+        $data["menu_status"] = 'student';
+        $data['activeLink'] = $pageStatus;
+        $data['selectedLocationId'] = $locationId;
+
+        $data['locationList'] = $this->webmodel->getAllActiveLocations();
+        $data['studentList'] = $this->webmodel->getStudentList($pageStatus, $locationId);
 
         $this->load->view('settings/header', $data);
         $this->load->view('student/student-list', $data);
@@ -34,6 +127,7 @@ class Web extends CI_Controller {
     {
         $data["menu_status"] = 'student';
         $data['formTitle'] = "Add Student";
+        $data['locationList'] = $this->webmodel->getAllActiveLocations();
 
         $year = date('Y');
         $this->db->select_max('id');
@@ -44,6 +138,8 @@ class Web extends CI_Controller {
         $miNumber = $year . '/' . $miNumberId;
 
         $data['studentCode'] = $miNumber;
+        $data['locationId'] = '';
+        $data['feesAmount'] = '';
 
         $this->load->view('settings/header', $data);
         $this->load->view('student/student-form', $data);
@@ -53,8 +149,8 @@ class Web extends CI_Controller {
     public function student_edit($studentId)
     {
         $data["menu_status"] = 'student';
-
         $data['formTitle'] = "Edit Student";
+        $data['locationList'] = $this->webmodel->getAllActiveLocations();
 
         $studentInfo = $this->webmodel->getStudentInfo($studentId);
         foreach ($studentInfo as $row) {
@@ -70,6 +166,8 @@ class Web extends CI_Controller {
             $data['parentName'] = $row->parent_name;
             $data['parentType'] = $row->parent_type;
             $data['address'] = $row->address;
+            $data['locationId'] = $row->location_id;
+            $data['feesAmount'] = $row->fees_amount;
             $data['status'] = $row->status;
         }
         
@@ -94,6 +192,9 @@ class Web extends CI_Controller {
             $data['parentName'] = $row->parent_name;
             $data['parentType'] = $row->parent_type;
             $data['address'] = $row->address;
+            $data['locationId'] = $row->location_id;
+            $data['locationName'] = $row->location_name;
+            $data['feesAmount'] = $row->fees_amount;
             $data['status'] = $row->status;
             $data['createdBy'] = $row->createdBy;
             $data['createdAt'] = $row->createdAt;
@@ -116,6 +217,8 @@ class Web extends CI_Controller {
         $parentName = $this->input->post('parent_name');
         $parentType = $this->input->post('parent_type');
         $address = $this->input->post('address');
+        $locationId = $this->input->post('location_id');
+        $feesAmount = $this->input->post('fees_amount');
         $status = $this->input->post('status');
 
         if ($studentId < 0 || $studentId == '') {
@@ -128,7 +231,7 @@ class Web extends CI_Controller {
             }
         }
 
-        $this->webmodel->saveStudentData($token, $studentId, $studentCode, $studentName, $class, $aadharNumber, $joiningDate, $email, $mobileNumber, $parentName, $parentType, $address, $status);
+        $this->webmodel->saveStudentData($token, $studentId, $studentCode, $studentName, $class, $aadharNumber, $joiningDate, $email, $mobileNumber, $parentName, $parentType, $address, $status, $locationId, $feesAmount);
         
         $data["isError"] = FALSE;
         if ($studentId > 0) {
@@ -147,6 +250,9 @@ class Web extends CI_Controller {
 
     public function attendance_list($year = '', $month = '')
     {
+        $year = ($year != '') ? $year : date('Y');
+        $month = ($month != '') ? $month : 'all';
+
         $data["menu_status"] = 'attendance';
         $data["year"] = $year;
         $data["month"] = $month;
@@ -204,6 +310,7 @@ class Web extends CI_Controller {
 
         $data['formTitle'] = "Add Present";
 
+        $data['locationList'] = $this->webmodel->getAllActiveLocations();
         $data['studentList'] = $this->webmodel->getStudentList('active');
 
         $this->load->view('settings/header', $data);
@@ -239,7 +346,8 @@ class Web extends CI_Controller {
     public function attendanceStudentList()
     {
         $attendanceDate = $this->input->post('attendanceDate');
-        $data = $this->webmodel->getAttendanceStudentList($attendanceDate);
+        $locationId = $this->input->post('locationId');
+        $data = $this->webmodel->getAttendanceStudentList($attendanceDate, $locationId);
         echo json_encode($data);
     }
 
@@ -373,6 +481,7 @@ class Web extends CI_Controller {
                 'student_name' => $student->student_name,
                 'class' => $student->class,
                 'joining_date' => $student->joining_date,
+                'fees_amount' => $student->fees_amount,
                 'months' => $studentFees
             ];
         }
@@ -406,6 +515,7 @@ class Web extends CI_Controller {
                 $data['studentCode'] = $row->student_code;
                 $data['studentName'] = $row->student_name;
                 $data['class'] = $row->class;
+                $data['feeAmount'] = $row->fees_amount;
             }
         }
 
@@ -460,6 +570,8 @@ class Web extends CI_Controller {
             $data['mobileNumber'] = $row->mobile_number;
             $data['email'] = $row->email;
             $data['address'] = $row->address;
+            $data['locationName'] = $row->location_name;
+            $data['feesAmount'] = $row->fees_amount;
             $data['status'] = $row->status;
             $data['deleteStatus'] = $row->delete_status;
         }
@@ -507,6 +619,8 @@ class Web extends CI_Controller {
         $overallPaidAmount = 0;
         $overallUnPaidAmount = 0;
 
+        $defaultStudentFee = ($studentInfo && isset($studentInfo[0]->fees_amount) && $studentInfo[0]->fees_amount > 0) ? $studentInfo[0]->fees_amount : 0;
+
         foreach ($period as $dt) {
             $monthName = strtolower($dt->format("F"));
             $yearStr = $dt->format("Y");
@@ -539,14 +653,14 @@ class Web extends CI_Controller {
                 $feesList[] = (object)[
                     'id' => 0,
                     'payment_date' => '-',
-                    'fee_amount' => 1000,
+                    'fee_amount' => $defaultStudentFee,
                     'payment_method' => '-',
                     'payment_status' => 'unpaid',
                     'status' => 'unpaid',
                     'month' => ucfirst($monthName) . ' ' . $yearStr,
                     'month_name' => ucfirst($monthName)
                 ];
-                $overallUnPaidAmount += 1000;
+                $overallUnPaidAmount += $defaultStudentFee;
             }
         }
 
@@ -606,7 +720,7 @@ class Web extends CI_Controller {
                 $data['mobileNumber'] = $row->mobile_number;
                 $data['email'] = $row->email;
                 $data['address'] = $row->address;
-                $data['feeAmount'] = null;
+                $data['feeAmount'] = $row->fees_amount;
                 $data['paymentDate'] = null;
                 $data['paymentMethod'] = null;
                 $data['paymentStatus'] = null;
@@ -785,6 +899,7 @@ class Web extends CI_Controller {
                 'student_name' => $student->student_name,
                 'class' => $student->class,
                 'joining_date' => $student->joining_date,
+                'fees_amount' => $student->fees_amount,
                 'months' => $studentFees,
                 'student_code' => $student->student_code
             ];

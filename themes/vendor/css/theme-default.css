@@ -127,7 +127,7 @@
 
 a.bg-primary:hover,
 a.bg-primary:focus {
-  background-color: #6467f2 !important;
+  background-color: #2e165a !important;
 }
 
 .dropdown-notifications-item:not(.mark-as-read) .dropdown-notifications-read span {
@@ -685,7 +685,7 @@ a {
 }
 
 a:hover {
-  color: #787bff;
+  color: #2e165a;
 }
 
 .fill-primary {

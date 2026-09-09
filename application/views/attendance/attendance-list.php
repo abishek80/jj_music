@@ -1,5 +1,19 @@
 <section class="content-wrapper">
     <div class="container-xxl flex-grow-1 container-p-y">
+        <!-- Year Tabs -->
+        <div class="d-flex gap-3 flex-wrap mb-3">
+            <?php 
+                $startYear = 2026;
+                $endYear = date('Y') + 1;
+                for($y = $startYear; $y <= $endYear; $y++) {
+            ?>
+                <a href="<?php echo base_url() . 'attendance-list/' . $y . '/all'; ?>" class="d-block card px-5 py-2 text-center <?php echo ($year == $y) ? 'bg-primary' : 'bg-white'; ?> shadow shadow-sm lh-1 rounded-2 border-primary border border-3 border-end-0 border-start-0 border-top-0">
+                    <p class="mb-0 text-capitalize <?php echo ($year == $y) ? 'text-white' : 'text-black'; ?>"><?php echo $y; ?></p>
+                </a>
+            <?php } ?>
+        </div>
+
+        <!-- Month Tabs -->
         <div class="d-flex gap-3 flex-wrap mb-3">
             <a href="<?php echo base_url() . 'attendance-list/' . $year . '/all'; ?>" class="d-block card px-5 py-2 text-center <?php echo ($month == 'all') ? 'bg-primary' : 'bg-white'; ?> shadow shadow-sm lh-1 rounded-2 border-primary border border-3 border-end-0 border-start-0 border-top-0">
                 <p class="mb-0 <?php echo ($month == 'all') ? 'text-white' : 'text-black'; ?>">All</p>

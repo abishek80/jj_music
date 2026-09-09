@@ -3,14 +3,83 @@
 
 class Webmodel extends CI_Model
 {
-    //Student List
-    public function getStudentList($pageStatus = '')
+    //Location List
+    public function getLocationList($pageStatus = '')
     {
+        $where = '';
         if ($pageStatus) {
-            $where = "AND S.status = '$pageStatus'";
+            $where = "AND L.status = '$pageStatus'";
         }
 
-        $sql = "SELECT S.* FROM student S WHERE S.delete_status = 0 $where ORDER BY S.student_code ASC";
+        $sql = "SELECT L.* FROM location L WHERE L.delete_status = 0 $where ORDER BY L.location_name ASC";
+
+        $res = $this->db->query($sql);
+        return $res->result();
+    }
+
+    //All Active Location List
+    public function getAllActiveLocations()
+    {
+        $sql = "SELECT * FROM location WHERE delete_status = 0 AND status = 'active' ORDER BY location_name ASC";
+
+        $res = $this->db->query($sql);
+        return $res->result();
+    }
+
+    //Location Info
+    public function getLocationInfo($locationId = '')
+    {
+        if ($locationId) {
+            $where = "WHERE L.id = $locationId";
+        } else {
+            $where = '';
+        }
+        $sql = "SELECT L.*, U.user_name AS createdBy, DATE_FORMAT(L.created_at, '%d/%m/%Y %h:%i %p') AS createdAt FROM location L LEFT JOIN users U ON L.created_by = U.id $where";
+
+        $res = $this->db->query($sql);
+        return $res->result();
+    }
+
+    //Save Location Data
+    public function saveLocationData($locationId, $locationName, $feesAmount, $status)
+    {
+        $userId = $this->session->userdata('userid');
+
+        if ($locationId > 0) {
+            $data = array(
+                'location_name' => $locationName,
+                'fees_amount' => $feesAmount,
+                'status' => $status,
+                'updated_by' => $userId,
+                'updated_at' => date('Y-m-d H:i:s')
+            );
+            $this->db->where('id', (int) $locationId);
+            $this->db->update('location', $data);
+        } else {
+            $data = array(
+                'location_name' => $locationName,
+                'fees_amount' => $feesAmount,
+                'status' => $status,
+                'created_by' => $userId,
+                'created_at' => date('Y-m-d H:i:s')
+            );
+            $this->db->insert('location', $data);
+            return $this->db->insert_id();
+        }
+    }
+
+    //Student List
+    public function getStudentList($pageStatus = '', $locationId = '')
+    {
+        $where = '';
+        if ($pageStatus) {
+            $where .= " AND S.status = '$pageStatus'";
+        }
+        if ($locationId) {
+            $where .= " AND S.location_id = '$locationId'";
+        }
+
+        $sql = "SELECT S.*, L.location_name FROM student S LEFT JOIN location L ON S.location_id = L.id WHERE S.delete_status = 0 $where ORDER BY S.student_code ASC";
 
         $res = $this->db->query($sql);
         return $res->result();
@@ -19,7 +88,7 @@ class Webmodel extends CI_Model
     //All Student List
     public function getAllStudentList()
     {
-        $sql = "SELECT S.* FROM student S WHERE S.delete_status = 0 AND S.status = 'active' ORDER BY S.student_code ASC";
+        $sql = "SELECT S.*, L.location_name FROM student S LEFT JOIN location L ON S.location_id = L.id WHERE S.delete_status = 0 AND S.status = 'active' ORDER BY S.student_code ASC";
 
         $res = $this->db->query($sql);
         return $res->result();
@@ -33,7 +102,7 @@ class Webmodel extends CI_Model
         } else {
             $where = '';
         }
-        $sql = "SELECT S.*, U.user_name AS createdBy, DATE_FORMAT(S.created_at, '%d/%m/%Y %h:%i %p') AS createdAt FROM student S LEFT JOIN users U ON S.created_by = U.id $where";
+        $sql = "SELECT S.*, L.location_name, U.user_name AS createdBy, DATE_FORMAT(S.created_at, '%d/%m/%Y %h:%i %p') AS createdAt FROM student S LEFT JOIN location L ON S.location_id = L.id LEFT JOIN users U ON S.created_by = U.id $where";
 
         $res = $this->db->query($sql);
         return $res->result();
@@ -49,7 +118,7 @@ class Webmodel extends CI_Model
     }
 
     //Save Student Form
-    public function saveStudentData($token, $studentId, $studentCode, $studentName, $class, $aadharNumber, $joiningDate, $email, $mobileNumber, $parentName, $parentType, $address, $status)
+    public function saveStudentData($token, $studentId, $studentCode, $studentName, $class, $aadharNumber, $joiningDate, $email, $mobileNumber, $parentName, $parentType, $address, $status, $locationId = null, $feesAmount = 0)
     {
         $userId = $this->session->userdata('userid');
 
@@ -66,6 +135,8 @@ class Webmodel extends CI_Model
                 'parent_name' => $parentName,
                 'parent_type' => $parentType,
                 'address' => $address,
+                'location_id' => $locationId,
+                'fees_amount' => $feesAmount,
                 'status' => $status,
                 'updated_by' => $userId,
                 'updated_at' => date('Y-m-d H:i:s')
@@ -85,6 +156,8 @@ class Webmodel extends CI_Model
                 'parent_name' => $parentName,
                 'parent_type' => $parentType,
                 'address' => $address,
+                'location_id' => $locationId,
+                'fees_amount' => $feesAmount,
                 'status' => $status,
                 'created_by' => $userId,
                 'created_at' => date('Y-m-d H:i:s')
@@ -326,16 +399,22 @@ class Webmodel extends CI_Model
         return $this->db->trans_status();
     }
     
-    public function getAttendanceStudentList($attendanceDate = '')
+    public function getAttendanceStudentList($attendanceDate = '', $locationId = '')
     {
         $dateFilterAttendance = "";
+        $dateFilterLeave = "";
+        $locationWhere = "";
 
         if ($attendanceDate != '') {
             $dateFilterAttendance = " AND A.present_date = '" . $attendanceDate . "'";
             $dateFilterLeave = " AND LD.leave_date = '" . $attendanceDate . "'";
         }
 
-        $sql = "SELECT S.* FROM student S WHERE S.delete_status = 0 AND S.status = 'active' AND NOT EXISTS (SELECT 1 FROM attendance A WHERE A.student_id = S.id $dateFilterAttendance AND A.delete_status = 0) AND NOT EXISTS (SELECT 1 FROM leave_detail LD WHERE LD.student_id = S.id AND LD.delete_status = 0 $dateFilterLeave) ORDER BY S.student_code ASC ";
+        if ($locationId != '') {
+            $locationWhere = " AND S.location_id = '" . $locationId . "'";
+        }
+
+        $sql = "SELECT S.*, L.location_name FROM student S LEFT JOIN location L ON S.location_id = L.id WHERE S.delete_status = 0 AND S.status = 'active' $locationWhere AND NOT EXISTS (SELECT 1 FROM attendance A WHERE A.student_id = S.id $dateFilterAttendance AND A.delete_status = 0) AND NOT EXISTS (SELECT 1 FROM leave_detail LD WHERE LD.student_id = S.id AND LD.delete_status = 0 $dateFilterLeave) ORDER BY S.student_code ASC";
 
         $res = $this->db->query($sql);
         return $res->result();
