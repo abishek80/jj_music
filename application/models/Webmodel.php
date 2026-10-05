@@ -737,5 +737,121 @@ class Webmodel extends CI_Model
         $this->db->limit($limit);
         return $this->db->get()->result();
     }
+
+    // Consolidated Menu Report Data (Location, Year, Month)
+    public function getConsolidatedReportData($locationId = 'all', $year = 'all', $month = 'all')
+    {
+        $studentWhere = "S.delete_status = 0";
+        if ($locationId !== 'all' && !empty($locationId)) {
+            $studentWhere .= " AND S.location_id = " . $this->db->escape($locationId);
+        }
+
+        $wherePresent = "A.delete_status = 0";
+        if ($year !== 'all' && !empty($year)) {
+            $wherePresent .= " AND YEAR(A.present_date) = " . $this->db->escape($year);
+        }
+        if ($month !== 'all' && !empty($month)) {
+            $wherePresent .= " AND LOWER(DATE_FORMAT(A.present_date, '%M')) = " . $this->db->escape(strtolower($month));
+        }
+
+        $whereLeave = "LD.delete_status = 0";
+        if ($year !== 'all' && !empty($year)) {
+            $whereLeave .= " AND YEAR(LD.leave_date) = " . $this->db->escape($year);
+        }
+        if ($month !== 'all' && !empty($month)) {
+            $whereLeave .= " AND LOWER(DATE_FORMAT(LD.leave_date, '%M')) = " . $this->db->escape(strtolower($month));
+        }
+
+        $whereFees = "F.delete_status = 0";
+        if ($year !== 'all' && !empty($year)) {
+            $whereFees .= " AND F.year = " . $this->db->escape($year);
+        }
+        if ($month !== 'all' && !empty($month)) {
+            $whereFees .= " AND LOWER(F.month) = " . $this->db->escape(strtolower($month));
+        }
+
+        $sql = "
+            SELECT 
+                S.id AS student_id,
+                S.student_code,
+                S.student_name,
+                S.class,
+                S.aadhar_number,
+                S.joining_date,
+                S.email,
+                S.mobile_number,
+                S.parent_name,
+                S.parent_type,
+                S.address,
+                S.fees_amount AS student_fee_amount,
+                S.status AS student_status,
+                L.id AS location_id,
+                L.location_name,
+                L.fees_amount AS location_default_fee,
+                COALESCE(ATT.present_count, 0) AS present_count,
+                COALESCE(LEA.leave_count, 0) AS leave_count,
+                COALESCE(FEE.total_paid_amount, 0) AS total_paid_amount,
+                FEE.payment_status,
+                FEE.payment_date,
+                FEE.payment_method,
+                FEE.invoice_number,
+                FEE.fee_records_count
+            FROM student S
+            LEFT JOIN location L ON S.location_id = L.id
+            LEFT JOIN (
+                SELECT student_id, COUNT(id) AS present_count
+                FROM attendance A
+                WHERE $wherePresent
+                GROUP BY student_id
+            ) ATT ON ATT.student_id = S.id
+            LEFT JOIN (
+                SELECT student_id, COUNT(id) AS leave_count
+                FROM leave_detail LD
+                WHERE $whereLeave
+                GROUP BY student_id
+            ) LEA ON LEA.student_id = S.id
+            LEFT JOIN (
+                SELECT 
+                    student_id,
+                    SUM(CASE WHEN payment_status = 'paid' THEN fee_amount ELSE 0 END) AS total_paid_amount,
+                    GROUP_CONCAT(DISTINCT payment_status) AS payment_status,
+                    MAX(payment_date) AS payment_date,
+                    GROUP_CONCAT(DISTINCT payment_method) AS payment_method,
+                    GROUP_CONCAT(DISTINCT invoice_number) AS invoice_number,
+                    COUNT(id) AS fee_records_count
+                FROM fees F
+                WHERE $whereFees
+                GROUP BY student_id
+            ) FEE ON FEE.student_id = S.id
+            WHERE $studentWhere
+            ORDER BY L.location_name ASC, S.student_code ASC
+        ";
+
+        return $this->db->query($sql)->result();
+    }
+
+    public function getReportYears()
+    {
+        $sql = "
+            SELECT DISTINCT year_val FROM (
+                SELECT YEAR(present_date) AS year_val FROM attendance WHERE delete_status = 0
+                UNION
+                SELECT year AS year_val FROM fees WHERE delete_status = 0
+                UNION
+                SELECT YEAR(joining_date) AS year_val FROM student WHERE delete_status = 0
+            ) Y WHERE year_val IS NOT NULL AND year_val > 2000 ORDER BY year_val DESC
+        ";
+        $res = $this->db->query($sql)->result();
+        $years = [];
+        foreach ($res as $row) {
+            $years[] = (string)$row->year_val;
+        }
+        $currentYear = (string)date('Y');
+        if (!in_array($currentYear, $years)) {
+            $years[] = $currentYear;
+        }
+        rsort($years);
+        return array_unique($years);
+    }
 }
 ?>

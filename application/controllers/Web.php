@@ -1041,4 +1041,190 @@ class Web extends CI_Controller {
         delete_cookie('ci_spacemanagement');
         redirect(base_url() . 'login');
     }
+
+    // Reports Controller Methods
+    public function reports()
+    {
+        $data["menu_status"] = 'reports';
+
+        $locationId = $this->input->get('location_id');
+        $year = $this->input->get('year');
+        $month = $this->input->get('month');
+
+        if ($locationId === NULL || $locationId === '') {
+            $locationId = 'all';
+        }
+        if ($year === NULL || $year === '') {
+            $year = date('Y');
+        }
+        if ($month === NULL || $month === '') {
+            $month = strtolower(date('F'));
+        }
+
+        $data['selectedLocation'] = $locationId;
+        $data['selectedYear'] = $year;
+        $data['selectedMonth'] = $month;
+
+        $data['locationList'] = $this->webmodel->getAllActiveLocations();
+        $data['yearList'] = $this->webmodel->getReportYears();
+        $data['monthList'] = ['january', 'february', 'march', 'april', 'may', 'june', 'july', 'august', 'september', 'october', 'november', 'december'];
+        $data['reportData'] = $this->webmodel->getConsolidatedReportData($locationId, $year, $month);
+
+        $this->load->view('settings/header', $data);
+        $this->load->view('reports/reports-view', $data);
+        $this->load->view('settings/footer');
+    }
+
+    public function reports_export_excel()
+    {
+        error_reporting(0);
+        while (ob_get_level()) {
+            ob_end_clean();
+        }
+
+        $locationId = $this->input->get('location_id') ?: 'all';
+        $year = $this->input->get('year') ?: date('Y');
+        $month = $this->input->get('month') ?: strtolower(date('F'));
+
+        $reportData = $this->webmodel->getConsolidatedReportData($locationId, $year, $month);
+
+        $locationName = 'All Locations';
+        if ($locationId != 'all' && !empty($locationId)) {
+            $locInfo = $this->webmodel->getLocationInfo($locationId);
+            if (!empty($locInfo)) {
+                $locationName = $locInfo[0]->location_name;
+            }
+        }
+
+        $filename = "Student_Attendance_Fees_Report_" . date('Ymd_His') . ".xls";
+
+        header("Content-Type: application/vnd.ms-excel; charset=utf-8");
+        header("Content-Disposition: attachment; filename=\"$filename\"");
+        header("Cache-Control: max-age=0");
+        header("Pragma: no-cache");
+
+        echo '<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">';
+        echo '<head><meta http-equiv="Content-Type" content="text/html; charset=utf-8">';
+        echo '<!--[if gte mso 9]><xml><x:ExcelWorkbook><x:ExcelWorksheets><x:ExcelWorksheet><x:Name>Report</x:Name><x:WorksheetOptions><x:DisplayGridlines/></x:WorksheetOptions></x:ExcelWorksheet></x:ExcelWorksheets></x:ExcelWorkbook></xml><![endif]-->';
+        echo '<style>
+                table { border-collapse: collapse; width: 100%; font-family: Arial, sans-serif; font-size: 12px; }
+                th { background-color: #198754; color: #ffffff; font-weight: bold; border: 1px solid #146c43; padding: 8px; text-align: left; }
+                td { border: 1px solid #cccccc; padding: 6px; }
+                .title-row { font-size: 16px; font-weight: bold; color: #198754; }
+                .meta-row { font-size: 12px; color: #333333; }
+                .text-center { text-align: center; }
+                .text-right { text-align: right; }
+                .badge-paid { background-color: #d1e7dd; color: #0f5132; font-weight: bold; }
+                .badge-unpaid { background-color: #f8d7da; color: #842029; font-weight: bold; }
+                .total-row td { background-color: #e9ecef; font-weight: bold; border-top: 2px solid #333; }
+              </style>';
+        echo '</head><body>';
+
+        echo '<table>';
+        echo '<tr><td colspan="21" class="title-row">JJ HARMONY AND ARTS ACADEMY - CONSOLIDATED REPORT</td></tr>';
+        echo '<tr><td colspan="21" class="meta-row"><b>Location:</b> ' . htmlspecialchars($locationName) . ' | <b>Year:</b> ' . htmlspecialchars($year == 'all' ? 'All Years' : $year) . ' | <b>Month:</b> ' . htmlspecialchars($month == 'all' ? 'All Months' : ucfirst($month)) . ' | <b>Exported On:</b> ' . date('d-m-Y h:i A') . '</td></tr>';
+        echo '<tr><td colspan="21"></td></tr>';
+
+        echo '<thead>';
+        echo '<tr>';
+        echo '<th>#</th>';
+        echo '<th>Student Code</th>';
+        echo '<th>Student Name</th>';
+        echo '<th>Class</th>';
+        echo '<th>Aadhar Number</th>';
+        echo '<th>Joining Date</th>';
+        echo '<th>Email</th>';
+        echo '<th>Mobile Number</th>';
+        echo '<th>Parent Name</th>';
+        echo '<th>Parent Type</th>';
+        echo '<th>Address</th>';
+        echo '<th>Location</th>';
+        echo '<th>Status</th>';
+        echo '<th class="text-center">Present Days</th>';
+        echo '<th class="text-center">Leave Days</th>';
+        echo '<th class="text-right">Monthly Fee (Rs.)</th>';
+        echo '<th class="text-center">Fee Status</th>';
+        echo '<th class="text-right">Paid Amount (Rs.)</th>';
+        echo '<th>Payment Date</th>';
+        echo '<th>Payment Method</th>';
+        echo '<th>Invoice Number</th>';
+        echo '</tr>';
+        echo '</thead>';
+
+        echo '<tbody>';
+        $sno = 1;
+        $totalPresent = 0;
+        $totalLeave = 0;
+        $totalMonthlyFee = 0;
+        $totalPaidAmount = 0;
+
+        foreach ($reportData as $row) {
+            $feeStatus = 'Unpaid';
+            $statusClass = 'badge-unpaid';
+            if ($row->total_paid_amount > 0) {
+                $feeStatus = 'Paid';
+                $statusClass = 'badge-paid';
+            } elseif (!empty($row->payment_status)) {
+                $feeStatus = ucfirst($row->payment_status);
+            }
+
+            $totalPresent += $row->present_count;
+            $totalLeave += $row->leave_count;
+            $totalMonthlyFee += floatval($row->student_fee_amount);
+            $totalPaidAmount += floatval($row->total_paid_amount);
+
+            echo '<tr>';
+            echo '<td class="text-center">' . $sno++ . '</td>';
+            echo '<td>' . htmlspecialchars($row->student_code) . '</td>';
+            echo '<td>' . htmlspecialchars($row->student_name) . '</td>';
+            echo '<td>' . htmlspecialchars($row->class) . '</td>';
+            echo '<td>' . htmlspecialchars($row->aadhar_number ?: 'N/A') . '</td>';
+            echo '<td>' . ($row->joining_date ? date('d-m-Y', strtotime($row->joining_date)) : 'N/A') . '</td>';
+            echo '<td>' . htmlspecialchars($row->email ?: 'N/A') . '</td>';
+            echo '<td>' . htmlspecialchars($row->mobile_number ?: 'N/A') . '</td>';
+            echo '<td>' . htmlspecialchars($row->parent_name ?: 'N/A') . '</td>';
+            echo '<td>' . htmlspecialchars($row->parent_type ?: 'N/A') . '</td>';
+            echo '<td>' . htmlspecialchars($row->address ?: 'N/A') . '</td>';
+            echo '<td>' . htmlspecialchars($row->location_name ?: 'N/A') . '</td>';
+            echo '<td>' . htmlspecialchars(ucfirst($row->student_status ?: 'active')) . '</td>';
+            echo '<td class="text-center">' . $row->present_count . '</td>';
+            echo '<td class="text-center">' . $row->leave_count . '</td>';
+            echo '<td class="text-right">' . number_format($row->student_fee_amount, 2, '.', '') . '</td>';
+            echo '<td class="text-center ' . $statusClass . '">' . $feeStatus . '</td>';
+            echo '<td class="text-right">' . number_format($row->total_paid_amount, 2, '.', '') . '</td>';
+            echo '<td>' . ($row->payment_date ? date('d-m-Y', strtotime($row->payment_date)) : 'N/A') . '</td>';
+            echo '<td>' . htmlspecialchars($row->payment_method ? ucfirst($row->payment_method) : 'N/A') . '</td>';
+            echo '<td>' . htmlspecialchars($row->invoice_number ?: 'N/A') . '</td>';
+            echo '</tr>';
+        }
+
+        echo '<tr class="total-row">';
+        echo '<td colspan="13" class="text-right">TOTAL SUMMARY:</td>';
+        echo '<td class="text-center">' . $totalPresent . '</td>';
+        echo '<td class="text-center">' . $totalLeave . '</td>';
+        echo '<td class="text-right">Rs. ' . number_format($totalMonthlyFee, 2, '.', '') . '</td>';
+        echo '<td></td>';
+        echo '<td class="text-right">Rs. ' . number_format($totalPaidAmount, 2, '.', '') . '</td>';
+        echo '<td colspan="3"></td>';
+        echo '</tr>';
+
+        echo '</tbody>';
+        echo '</table>';
+        echo '</body></html>';
+        exit;
+    }
+
+    public function reports_export_pdf()
+    {
+        $locationId = $this->input->get('location_id') ?: 'all';
+        $year = $this->input->get('year') ?: date('Y');
+        $month = $this->input->get('month') ?: strtolower(date('F'));
+
+        $data['selectedLocation'] = $locationId;
+        $data['selectedYear'] = $year;
+        $data['selectedMonth'] = $month;
+        $data['reportData'] = $this->webmodel->getConsolidatedReportData($locationId, $year, $month);
+
+        $this->load->view('reports/reports-pdf', $data);
+    }
 }

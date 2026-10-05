@@ -81,6 +81,12 @@
                             <div data-i18n="Location Master">Location Master</div>
                         </a>
                     </li>
+                    <li class="menu-item <?php echo $menu_status == 'reports' ? 'active' : ''; ?>">
+                        <a href="<?php echo base_url(); ?>reports" class="menu-link">
+                            <i class="menu-icon tf-icons bx bx-file-blank"></i>
+                            <div data-i18n="Reports">Reports</div>
+                        </a>
+                    </li>
                     <li class="menu-item <?php echo $menu_status == 'general-settings' ? 'active' : ''; ?>">
                         <a href="<?php echo base_url(); ?>general-settings" class="menu-link">
                             <i class="menu-icon tf-icons bx bx-cog"></i>
